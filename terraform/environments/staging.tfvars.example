@@ -1,0 +1,27 @@
+environment    = "staging"
+aws_region     = "us-east-1"
+app_name       = "orders-api"
+desired_count  = 1
+cpu            = 256
+memory         = 512
+
+cloudwatch_log_retention_days = 30
+
+alarm_cpu_threshold    = 85
+alarm_memory_threshold = 90
+alarm_5xx_threshold    = 10
+alarm_actions_enabled  = false
+sns_alarm_email        = ""
+
+cdn_enabled            = true
+cdn_price_class        = "PriceClass_100"
+cdn_default_ttl        = 0
+cdn_min_ttl            = 0
+cdn_max_ttl            = 600
+cdn_allowed_http_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+cdn_cached_methods     = ["GET", "HEAD"]
+cdn_forward_headers    = ["*"]
+cdn_forward_cookies    = "all"
+cdn_forward_query_strings = true
+cdn_acm_certificate_arn = ""
+cdn_custom_domain       = ""

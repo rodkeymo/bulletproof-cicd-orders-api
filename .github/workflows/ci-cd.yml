@@ -1,0 +1,221 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: orders-api
+  ECS_CLUSTER: orders-api-cluster
+  ECS_SERVICE: orders-api-service
+  CONTAINER_NAME: orders-api
+  ALB_NAME: orders-api-alb
+  STAGING_ALB_NAME: orders-api-staging-alb
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+  STAGING_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.STAGING_CLOUDFRONT_DISTRIBUTION_ID }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------- GATE 1: TEST ----------
+  # Nothing downstream runs unless this passes. Cheap and fast on purpose,
+  # so a broken PR fails in under a minute, not after a 10-minute build.
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  # ---------- GATE 2: BUILD & PUSH IMAGE ----------
+  # Only runs on main (i.e. after a PR has already merged), and only if
+  # tests passed. Image is tagged with the immutable git SHA, never "latest",
+  # so every deploy is traceable back to an exact commit.
+  build:
+    name: Build & Push Image
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        id: image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Scan image for critical vulnerabilities
+        run: |
+          aws ecr wait image-scan-complete \
+            --repository-name $ECR_REPOSITORY \
+            --image-id imageTag=${{ github.sha }}
+          FINDINGS=$(aws ecr describe-image-scan-findings \
+            --repository-name $ECR_REPOSITORY \
+            --image-id imageTag=${{ github.sha }} \
+            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' --output text)
+          if [ "$FINDINGS" != "None" ] && [ "$FINDINGS" -gt 0 ]; then
+            echo "::error::$FINDINGS critical vulnerabilities found — blocking deploy"
+            exit 1
+          fi
+
+  # ---------- GATE 3: DEPLOY TO STAGING ----------
+  # Auto-deploys on every merge to main. This is where a bad deploy should
+  # get caught by smoke tests before it ever reaches a real customer.
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Render new task definition
+        id: task-def
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_SERVICE }} \
+            --query taskDefinition > task-def.json
+
+      - name: Update image in task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ needs.build.outputs.image }}
+
+      - name: Deploy to ECS (staging)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: orders-api-staging-cluster
+          service: orders-api-staging-service
+          wait-for-service-stability: true
+
+      - name: Smoke test staging
+        run: |
+          # Prefer CDN URL if STAGING_CLOUDFRONT_DISTRIBUTION_ID is set; otherwise fall back to ALB.
+          # (CDN may have propagation latency — we try CDN first, then ALB.)
+          URL=""
+          if [ -n "$STAGING_CLOUDFRONT_DISTRIBUTION_ID" ] && [ "$STAGING_CLOUDFRONT_DISTRIBUTION_ID" != "null" ]; then
+            URL="https://$(aws cloudfront get-distribution --id $STAGING_CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.DomainName' --output text)"
+          fi
+          if [ -z "$URL" ] || [ "$URL" = "https://" ]; then
+            URL="http://$(aws elbv2 describe-load-balancers --names $STAGING_ALB_NAME \
+              --query 'LoadBalancers[0].DNSName' --output text)"
+          fi
+          echo "Smoke testing staging at $URL"
+          for i in {1..15}; do
+            if curl -fsS "$URL/health"; then exit 0; fi
+            echo "Retry $i/15..."
+            sleep 5
+          done
+          echo "::error::staging smoke test failed — $URL/health never returned 2xx"
+          exit 1
+
+  # ---------- GATE 4: DEPLOY TO PRODUCTION ----------
+  # Requires the "production" GitHub Environment to have a manual approval
+  # rule configured. This is the deliberate pause before customer traffic.
+  deploy-production:
+    name: Deploy to Production
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Render new task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_SERVICE }} \
+            --query taskDefinition > task-def.json
+
+      - name: Update image in task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ needs.build.outputs.image }}
+
+      - name: Deploy to ECS (production)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
+
+      - name: Post-deploy health check
+        run: |
+          URL=""
+          if [ -n "$CLOUDFRONT_DISTRIBUTION_ID" ] && [ "$CLOUDFRONT_DISTRIBUTION_ID" != "null" ]; then
+            URL="https://$(aws cloudfront get-distribution --id $CLOUDFRONT_DISTRIBUTION_ID --query 'Distribution.DomainName' --output text)"
+          fi
+          if [ -z "$URL" ] || [ "$URL" = "https://" ]; then
+            URL="http://$(aws elbv2 describe-load-balancers --names $ALB_NAME \
+              --query 'LoadBalancers[0].DNSName' --output text)"
+          fi
+          echo "Health checking production at $URL"
+          curl -fsS "$URL/health"
+
+      - name: Invalidate CloudFront cache (production)
+        if: env.CLOUDFRONT_DISTRIBUTION_ID != '' && env.CLOUDFRONT_DISTRIBUTION_ID != 'null'
+        run: |
+          echo "Issuing wildcard invalidation /* for distribution $CLOUDFRONT_DISTRIBUTION_ID"
+          INV_ID=$(aws cloudfront create-invalidation \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+            --paths "/*" \
+            --query 'Invalidation.Id' --output text)
+          echo "Invalidation ID: $INV_ID"
+          aws cloudfront wait invalidation-completed \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+            --id "$INV_ID"
+          echo "Invalidation complete."

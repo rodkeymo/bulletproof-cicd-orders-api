@@ -1,0 +1,373 @@
+# =============================================================================
+#  Comprehensive .gitignore — covers EVERY category of generated / transient /
+#  secret / machine-specific file & folder that can appear anywhere inside
+#  this repository.
+#  Sections are ordered by relevance to the project's actual stack
+#  (Node → Docker → Tests → Terraform → AWS tooling → Editors → OS → etc.)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+#  1.  NODE.JS RUNTIME  — package managers, install artifacts, node_modules
+# -----------------------------------------------------------------------------
+# Dependency trees (never commit; regenerated via npm ci / yarn install / pnpm i)
+node_modules/
+jspm_packages/
+
+# Package manager install / debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+npm-shrinkwrap.json.bak
+
+# Optional npm cache directory (on some CI runners it gets written locally)
+.npm
+.cache
+
+# Node polyfill / native module build artifacts
+*.node
+gyp.ini
+build/
+out/
+dist/
+lib-cov/
+
+# Volta / nvm / nodeenv / asdf per-project pin files you may not want to commit
+# (comment out if you DO use these and want reproducibility across devs):
+# .node-version
+# .nvmrc
+# .tool-versions
+
+# Lockfile variants: Yarn 2+ PnP + pnpm + Bun (we keep package-lock.json via NOT
+# ignoring it — Yarn/pnpm lockfiles are not present in this repo but ignored
+# anyway should another dev bring them in later with a different PM)
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+.yarn.lock.bak
+pnpm-lock.yaml.bak
+
+# Bun
+bun.lockb
+bunfig.toml
+
+# -----------------------------------------------------------------------------
+#  2.  DOCKER
+# -----------------------------------------------------------------------------
+# Local docker-compose overrides / env files (docker-compose.yml should be
+# tracked if the project uses it; the *.override pattern is intentionally
+# excluded since it's per-developer)
+docker-compose.override.yml
+docker-compose.*.override.yml
+.docker
+
+# -----------------------------------------------------------------------------
+#  3.  TESTS + COVERAGE  — Jest / Vitest / Mocha / C8 / Istanbul / NYC / Playwright
+# -----------------------------------------------------------------------------
+# Coverage report output directories
+coverage/
+.nyc_output/
+.coverage
+*.lcov
+lcov-report/
+
+# Test runner scratch / cache
+jest_0/
+.cache/
+.vitest/
+playwright-report/
+test-results/
+playwright/.cache/
+.spec_report/
+tap-results/
+allure-results/
+allure-report/
+
+# Snapshot / debugger droppings
+*.snap.md.bak
+.vscode-test/
+reports/
+
+# -----------------------------------------------------------------------------
+#  4.  TERRAFORM  — CLI state, plugins, plan files, tfvars (REAL values, not .example)
+# -----------------------------------------------------------------------------
+# Plugin / provider cache (per-module)
+.terraform/
+.terraformrc
+.terraform.d/
+*.terraform.lock.hcl.bak
+# ^ .terraform.lock.hcl itself SHOULD be committed (providers pinning) — so we
+#   don't ignore it; only the .bak variant is excluded.
+
+# Plan files (binary + human-readable)
+*.tfplan
+*tfplan
+*.plan
+
+# State (NEVER commit real state — it holds secrets like DB passwords, RDS master
+# passwords, IAM access keys. State MUST live in S3/GCS/Azure Blob via backend.)
+*.tfstate
+*.tfstate.*
+!.terraform-version
+
+# Crash logs from `terraform apply`
+crash.log
+crash.*.log
+
+# Variable files containing real secrets / environment values.
+# Only *.tfvars.example and *.tfvars.template are committed.
+*.tfvars
+!*.tfvars.example
+!*.tfvars.template
+
+# -----------------------------------------------------------------------------
+#  5.  AWS / CDK / SAM / CLI TOOLING  — anything IaC / CloudFormation related
+# -----------------------------------------------------------------------------
+# AWS SAM / Chalice / CDK build output directories
+.cdk/
+.cdk.out/
+cdk.out/
+.sam/
+.aws-sam/
+aws-sam/
+chalice/
+.serverless/
+
+# CloudFormation local build artifacts
+template.json
+packaged.yaml
+packaged.yml
+.outputs.json
+
+# Local AWS CLI / SDK credential caches
+.aws/credentials.cache
+
+# ECS CLI / Copilot artifacts you don't commit
+copilot/environments/addons/*.params.yml
+
+# -----------------------------------------------------------------------------
+#  6.  ENVIRONMENT / SECRETS  — .env family MUST NEVER be committed
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+.envrc
+.sec
+.secrets
+.secret
+
+# -----------------------------------------------------------------------------
+#  7.  LOGS  — application-level, system-level
+# -----------------------------------------------------------------------------
+logs/
+*.log
+!spec.log
+!example.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+forever.log
+access.log
+error.log
+
+# -----------------------------------------------------------------------------
+#  8.  PYTHON  — if ever any helper scripts (cDK, chalice, boto3, etc.) get added
+# -----------------------------------------------------------------------------
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+venv.bak/
+env/
+ENV/
+.venv/
+.venv.bak/
+env.bak/
+
+# Pipenv / PDM / Poetry
+Pipfile.lock
+poetry.lock.bak
+.pdm-python
+__pypackages__/
+
+# -----------------------------------------------------------------------------
+#  9.  EDITORS / IDEs  — VS Code, JetBrains, Vim, Emacs, Sublime, Eclipse…
+# -----------------------------------------------------------------------------
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json           # <— uncomment to TEAM-share vscode settings
+!.vscode/launch.json             # <— uncomment to TEAM-share debug configs
+!.vscode/tasks.json
+!.vscode/code-workspace.code-workspace
+
+# JetBrains (IDEA, WebStorm, PyCharm, GoLand…)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Neovim swap / undo / session files
+[._]*.s[a-v][a-z]
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project.bak
+
+# Eclipse / NetBeans
+.project
+.classpath
+.settings/
+.metadata
+.apt_generated
+.factorypath
+.springBeans
+.sts4-cache
+.buildpath
+.externalToolBuilders
+.gradle
+
+# -----------------------------------------------------------------------------
+#  10.  OPERATING SYSTEMS  — Windows, macOS, Linux desktop clutter
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux / KDE / GNOME
+.directory
+.Trash-*
+.nfs*
+
+# -----------------------------------------------------------------------------
+#  11.  BACKUPS / RCS / SHELL DROPPINGS
+# -----------------------------------------------------------------------------
+# Backup files created by editors (`cp file file.bak`, vim :w xxx~, git edit)
+*.bak
+*.backup
+*.orig
+*.rej
+*.swp
+*.swo
+*.save
+*.sav
+*.old
+*.tmp
+*.temp
+
+# Patch / diff / RCS droppings you may leave lying around
+*.patch
+*.diff
+*.rej
+CVS/
+.svn/
+.hg/
+
+# Shell / debugger history
+.bash_history
+.zsh_history
+.psql_history
+.mysql_history
+.lesshst
+
+# -----------------------------------------------------------------------------
+#  12.  MISC GENERATED FILES
+# -----------------------------------------------------------------------------
+# Compressed archives (should be in a separate releases bucket, not git)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.gz
+
+# Rendered output you don't commit (we keep .pptx / .pdf / images OUTSIDE this
+# project's tracked set since the parent dir holds the pptx — this keeps any
+# generated renders out of git if you ever add them under this folder)
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx.bak
+
+# Database / Redis dump files
+*.sqlite
+*.sqlite3
+dump.rdb
+dump.sql
+
+# Kubernetes / Helm local overrides
+.kube/config.local
+helm-values.local.yaml
+
+# TMP working directories created during scripts
+tmp/
+temp/
+.work/
+scratch/

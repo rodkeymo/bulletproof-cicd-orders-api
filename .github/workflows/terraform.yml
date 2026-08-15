@@ -1,0 +1,66 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths: ['terraform/**']
+  push:
+    branches: [main]
+    paths: ['terraform/**']
+
+permissions:
+  contents: read
+  pull-requests: write
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - run: terraform fmt -check
+      - run: terraform init
+      - run: terraform validate
+
+      - name: Plan
+        run: terraform plan -var-file=environments/production.tfvars.example -no-color -out=tfplan
+        continue-on-error: false
+
+      # In a real pipeline: post the plan output as a PR comment here so
+      # reviewers see exactly what infra will change before approving.
+
+  apply:
+    name: Apply
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production   # manual approval gate, same as the app deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - run: terraform init
+      - run: terraform apply -var-file=environments/production.tfvars.example -auto-approve
