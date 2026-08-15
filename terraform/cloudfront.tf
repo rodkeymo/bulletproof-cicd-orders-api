@@ -119,16 +119,16 @@ resource "aws_cloudfront_distribution" "api" {
   }
 
   origin {
-    domain_name             = aws_lb.main.dns_name
-    origin_id               = "${var.app_name}-alb-origin"
+    domain_name              = aws_lb.main.dns_name
+    origin_id                = "${var.app_name}-alb-origin"
     origin_access_control_id = aws_cloudfront_origin_access_control.alb_default[0].id
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-      origin_read_timeout    = 60
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "http-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_read_timeout      = 60
       origin_keepalive_timeout = 5
     }
 
@@ -153,42 +153,42 @@ resource "aws_cloudfront_distribution" "api" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/health"
-    target_origin_id       = "${var.app_name}-alb-origin"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    viewer_protocol_policy = local.cdn_viewer_protocol_allowed
-    compress               = true
-    default_ttl            = 0
-    max_ttl                = 0
-    min_ttl                = 0
+    path_pattern               = "/health"
+    target_origin_id           = "${var.app_name}-alb-origin"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = local.cdn_viewer_protocol_allowed
+    compress                   = true
+    default_ttl                = 0
+    max_ttl                    = 0
+    min_ttl                    = 0
     cache_policy_id            = aws_cloudfront_cache_policy.api_default[0].id
     origin_request_policy_id   = aws_cloudfront_origin_request_policy.api_forward_all[0].id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers[0].id
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/ready"
-    target_origin_id       = "${var.app_name}-alb-origin"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    viewer_protocol_policy = local.cdn_viewer_protocol_allowed
-    compress               = true
-    default_ttl            = 0
-    max_ttl                = 0
-    min_ttl                = 0
+    path_pattern               = "/ready"
+    target_origin_id           = "${var.app_name}-alb-origin"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = local.cdn_viewer_protocol_allowed
+    compress                   = true
+    default_ttl                = 0
+    max_ttl                    = 0
+    min_ttl                    = 0
     cache_policy_id            = aws_cloudfront_cache_policy.api_default[0].id
     origin_request_policy_id   = aws_cloudfront_origin_request_policy.api_forward_all[0].id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers[0].id
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/orders*"
-    target_origin_id       = "${var.app_name}-alb-origin"
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
-    viewer_protocol_policy = local.cdn_viewer_protocol_allowed
-    compress               = true
+    path_pattern               = "/orders*"
+    target_origin_id           = "${var.app_name}-alb-origin"
+    allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = local.cdn_viewer_protocol_allowed
+    compress                   = true
     cache_policy_id            = aws_cloudfront_cache_policy.api_default[0].id
     origin_request_policy_id   = aws_cloudfront_origin_request_policy.api_forward_all[0].id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers[0].id

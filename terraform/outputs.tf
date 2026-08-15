@@ -64,12 +64,12 @@ output "sns_alarm_topic_arn" {
 output "alarm_arns" {
   description = "Map of all created CloudWatch alarm ARNs by name"
   value = {
-    ecs_cpu_high        = aws_cloudwatch_metric_alarm.ecs_cpu_high.arn
-    ecs_memory_high     = aws_cloudwatch_metric_alarm.ecs_memory_high.arn
-    alb_5xx_high        = aws_cloudwatch_metric_alarm.alb_5xx_high.arn
-    alb_4xx_rate        = aws_cloudwatch_metric_alarm.alb_4xx_rate.arn
-    app_error_rate      = aws_cloudwatch_metric_alarm.app_error_rate.arn
-    unhealthy_hosts     = aws_cloudwatch_metric_alarm.ecs_unhealthy_hosts.arn
-    autoscaling_often   = aws_cloudwatch_metric_alarm.autoscaling_actions.arn
+    ecs_cpu_high      = aws_cloudwatch_metric_alarm.ecs_cpu_high.arn
+    ecs_memory_high   = aws_cloudwatch_metric_alarm.ecs_memory_high.arn
+    alb_5xx_high      = aws_cloudwatch_metric_alarm.alb_5xx_high.arn
+    alb_4xx_rate      = aws_cloudwatch_metric_alarm.alb_4xx_rate.arn
+    app_error_rate    = aws_cloudwatch_metric_alarm.app_error_rate.arn
+    unhealthy_hosts   = aws_cloudwatch_metric_alarm.ecs_unhealthy_hosts.arn
+    autoscaling_often = aws_cloudwatch_metric_alarm.autoscaling_actions.arn
   }
 }
