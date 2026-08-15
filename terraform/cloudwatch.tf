@@ -209,14 +209,14 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "cpu", label = "CPU %", stat = "Average" } ],
-            [ ".", "MemoryUtilization", ".", ".", ".", ".", { id = "mem", namespace = "ECS/ContainerInsights", label = "Memory %", stat = "Average" } ]
+            ["AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "cpu", label = "CPU %", stat = "Average" }],
+            [".", "MemoryUtilization", ".", ".", ".", ".", { id = "mem", namespace = "ECS/ContainerInsights", label = "Memory %", stat = "Average" }]
           ]
-          period     = 60
-          title      = "ECS Service — CPU & Memory"
-          view       = "timeSeries"
-          stacked    = false
-          region     = var.aws_region
+          period  = 60
+          title   = "ECS Service — CPU & Memory"
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
           yAxis = {
             left = { min = 0, max = 100 }
           }
@@ -230,10 +230,10 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.main.arn_suffix, { id = "req", label = "Requests", stat = "Sum" } ],
-            [ ".", "HTTPCode_Target_2XX_Count", ".", ".", { id = "2xx", label = "2xx", stat = "Sum" } ],
-            [ ".", "HTTPCode_Target_4XX_Count", ".", ".", { id = "4xx", label = "4xx", stat = "Sum" } ],
-            [ ".", "HTTPCode_Target_5XX_Count", ".", ".", { id = "5xx", label = "5xx", stat = "Sum" } ]
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.main.arn_suffix, { id = "req", label = "Requests", stat = "Sum" }],
+            [".", "HTTPCode_Target_2XX_Count", ".", ".", { id = "2xx", label = "2xx", stat = "Sum" }],
+            [".", "HTTPCode_Target_4XX_Count", ".", ".", { id = "4xx", label = "4xx", stat = "Sum" }],
+            [".", "HTTPCode_Target_5XX_Count", ".", ".", { id = "5xx", label = "5xx", stat = "Sum" }]
           ]
           period  = 60
           title   = "ALB — Request Volume & HTTP Codes"
@@ -250,9 +250,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.main.arn_suffix, { id = "lat", label = "Avg Latency (s)", stat = "Average", yAxis = "left" } ],
-            [ "AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", aws_lb.main.arn_suffix, "TargetGroup", aws_lb_target_group.app.arn_suffix, { id = "hh", label = "Healthy Hosts", stat = "Maximum", yAxis = "right" } ],
-            [ ".", "UnHealthyHostCount", ".", ".", ".", ".", { id = "uh", label = "Unhealthy Hosts", stat = "Maximum", yAxis = "right" } ]
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.main.arn_suffix, { id = "lat", label = "Avg Latency (s)", stat = "Average", yAxis = "left" }],
+            ["AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", aws_lb.main.arn_suffix, "TargetGroup", aws_lb_target_group.app.arn_suffix, { id = "hh", label = "Healthy Hosts", stat = "Maximum", yAxis = "right" }],
+            [".", "UnHealthyHostCount", ".", ".", ".", ".", { id = "uh", label = "Unhealthy Hosts", stat = "Maximum", yAxis = "right" }]
           ]
           period  = 60
           title   = "ALB — Latency & Target Health"
@@ -273,8 +273,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "${var.app_name}/metrics", "${var.app_name}-app-errors", { id = "errors", label = "ERROR lines", stat = "Sum" } ],
-            [ "${var.app_name}/metrics", "${var.app_name}-app-warnings", { id = "warns", label = "WARN lines", stat = "Sum" } ]
+            ["${var.app_name}/metrics", "${var.app_name}-app-errors", { id = "errors", label = "ERROR lines", stat = "Sum" }],
+            ["${var.app_name}/metrics", "${var.app_name}-app-warnings", { id = "warns", label = "WARN lines", stat = "Sum" }]
           ]
           period  = 300
           title   = "Application — Errors & Warnings (from logs)"
@@ -291,9 +291,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ECS", "DesiredTaskCount", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "desired", label = "Desired Tasks", stat = "Maximum" } ],
-            [ ".", "RunningTaskCount", ".", ".", ".", ".", { id = "running", label = "Running Tasks", stat = "Maximum" } ],
-            [ ".", "PendingTaskCount", ".", ".", ".", ".", { id = "pending", label = "Pending Tasks", stat = "Maximum" } ]
+            ["AWS/ECS", "DesiredTaskCount", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "desired", label = "Desired Tasks", stat = "Maximum" }],
+            [".", "RunningTaskCount", ".", ".", ".", ".", { id = "running", label = "Running Tasks", stat = "Maximum" }],
+            [".", "PendingTaskCount", ".", ".", ".", ".", { id = "pending", label = "Pending Tasks", stat = "Maximum" }]
           ]
           period  = 60
           title   = "ECS — Task Count (Auto-Scaling)"
@@ -313,9 +313,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "cpu", label = "CPU %", stat = "Maximum" } ],
-            [ "ECS/ContainerInsights", "MemoryUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "mem", label = "Memory %", stat = "Maximum" } ],
-            [ "AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", aws_lb.main.arn_suffix, { id = "5xx", label = "5XX Sum", stat = "Sum" } ]
+            ["AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "cpu", label = "CPU %", stat = "Maximum" }],
+            ["ECS/ContainerInsights", "MemoryUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name, { id = "mem", label = "Memory %", stat = "Maximum" }],
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", aws_lb.main.arn_suffix, { id = "5xx", label = "5XX Sum", stat = "Sum" }]
           ]
           annotations = {
             horizontal = [

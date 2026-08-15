@@ -14,7 +14,7 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn             = aws_iam_role.task.arn
+  task_role_arn            = aws_iam_role.task.arn
 
   container_definitions = jsonencode([
     {
@@ -62,8 +62,8 @@ resource "aws_ecs_service" "app" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
-    container_name    = var.app_name
-    container_port    = var.container_port
+    container_name   = var.app_name
+    container_port   = var.container_port
   }
 
   depends_on = [aws_lb_listener.http]
