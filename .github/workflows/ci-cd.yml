@@ -11,6 +11,10 @@ env:
   ECR_REPOSITORY: orders-api
   ECS_CLUSTER: orders-api-cluster
   ECS_SERVICE: orders-api-service
+  ECS_TASK_DEFINITION_FAMILY: orders-api-production
+  STAGING_ECS_CLUSTER: orders-api-staging-cluster
+  STAGING_ECS_SERVICE: orders-api-staging-service
+  STAGING_ECS_TASK_DEFINITION_FAMILY: orders-api-staging
   CONTAINER_NAME: orders-api
   ALB_NAME: orders-api-alb
   STAGING_ALB_NAME: orders-api-staging-alb
@@ -132,7 +136,7 @@ jobs:
         id: task-def
         run: |
           aws ecs describe-task-definition \
-            --task-definition ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ env.STAGING_ECS_TASK_DEFINITION_FAMILY }} \
             --query taskDefinition > task-def.json
 
       - name: Update image in task definition
@@ -147,8 +151,8 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}
-          cluster: orders-api-staging-cluster
-          service: orders-api-staging-service
+          cluster: ${{ env.STAGING_ECS_CLUSTER }}
+          service: ${{ env.STAGING_ECS_SERVICE }}
           wait-for-service-stability: true
 
       - name: Smoke test staging
@@ -193,7 +197,7 @@ jobs:
       - name: Render new task definition
         run: |
           aws ecs describe-task-definition \
-            --task-definition ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ env.ECS_TASK_DEFINITION_FAMILY }} \
             --query taskDefinition > task-def.json
 
       - name: Update image in task definition
