@@ -76,18 +76,40 @@ jobs:
 
       - name: Scan image for critical vulnerabilities
         run: |
-          aws ecr wait image-scan-complete \
-            --repository-name $ECR_REPOSITORY \
-            --image-id imageTag=${{ github.sha }}
-          FINDINGS=$(aws ecr describe-image-scan-findings \
-            --repository-name $ECR_REPOSITORY \
-            --image-id imageTag=${{ github.sha }} \
-            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' --output text)
-          if [ "$FINDINGS" != "None" ] && [ "$FINDINGS" -gt 0 ]; then
-            echo "::error::$FINDINGS critical vulnerabilities found — blocking deploy"
+          # Wait for scan (scan-on-push must be enabled on the repo)
+          for i in $(seq 1 30); do
+            STATUS=$(aws ecr describe-image-scan-findings \
+              --repository-name "$ECR_REPOSITORY" \
+              --image-id imageTag=${{ github.sha }} \
+              --query 'imageScanStatus.status' \
+              --output text 2>/dev/null || echo "PENDING")
+            echo "Scan status: $STATUS (attempt $i/30)"
+            if [ "$STATUS" = "COMPLETE" ]; then
+              break
+            fi
+            if [ "$STATUS" = "FAILED" ]; then
+              echo "::error::Image scan failed"
+              exit 1
+            fi
+            sleep 10
+          done
+
+          if [ "$STATUS" != "COMPLETE" ]; then
+            echo "::error::Timed out waiting for image scan"
             exit 1
           fi
 
+          FINDINGS=$(aws ecr describe-image-scan-findings \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-id imageTag=${{ github.sha }} \
+            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' \
+            --output text)
+          if [ "$FINDINGS" != "None" ] && [ "$FINDINGS" != "null" ] && [ "${FINDINGS:-0}" -gt 0 ] 2>/dev/null; then
+            echo "::error::$FINDINGS critical vulnerabilities found — blocking deploy"
+            exit 1
+          fi
+          echo "No critical vulnerabilities found."
+          
   # ---------- GATE 3: DEPLOY TO STAGING ----------
   # Auto-deploys on every merge to main. This is where a bad deploy should
   # get caught by smoke tests before it ever reaches a real customer.
